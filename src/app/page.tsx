@@ -19,6 +19,7 @@ const Home = () => {
   const [targetType, setTargetType] = useState<'Anime' | 'Manga'>('Anime'); // Состояние для типа турнира
   const [currentPairIndex, setCurrentPairIndex] = useState<number>(0);
   const [totalPairs, setTotalPairs] = useState<number>(0);
+  const [voteHistory, setVoteHistory] = useState<any[]>([]);
 
   useEffect(() => {
     const savedState = localStorage.getItem('tournamentState');
@@ -185,42 +186,74 @@ const Home = () => {
   };
 
   const handleVote = async (winner: any, draw: boolean = false) => {
+    const currentPair = pairs[0]; // Сохраняем текущую пару
+  
+    // Сохраняем голос в историю (включаем информацию о ничьей)
+    setVoteHistory((prevHistory) => [
+      ...prevHistory,
+      { pair: currentPair, winner, draw },
+    ]);
+  
+    if (!draw) {
+      setResults((prevResults) => ({
+        ...prevResults,
+        [winner.title]: (prevResults[winner.title] || 0) + 2,
+      }));
+    } else {
+      setResults((prevResults) => ({
+        ...prevResults,
+        [currentPair[0].title]: (prevResults[currentPair[0].title] || 0) + 1,
+        [currentPair[1].title]: (prevResults[currentPair[1].title] || 0) + 1,
+      }));
+    }
+  
+    const currentPairs = pairs.slice(1);
+    setPairs(currentPairs);
+    setCurrentPairIndex((prevIndex) => prevIndex + 1);
+  
+    if (currentPairs.length > 0) {
+      await loadPostersForPair(currentPairs[0]);
+    } else if (currentRound < rounds) {
+      setCurrentRound((prev) => prev + 1);
+      const nextPairs = generateTournamentPairs();
+      setPairs(nextPairs);
+      setTotalPairs(nextPairs.length);
+      setCurrentPairIndex(0);
+      await loadPostersForPair(nextPairs[0]);
+    } else {
+      setFinished(true);
+    }
+  
+    saveTournamentState();
+  };   
+
+  const handleBackToPreviousPair = () => {
+    if (voteHistory.length > 0) {
+      const lastVote = voteHistory[voteHistory.length - 1]; // Последний голос
+      const { pair, winner, draw } = lastVote;
+  
+      // Восстанавливаем предыдущую пару
+      setPairs([pair, ...pairs]);
+      setVoteHistory(voteHistory.slice(0, -1)); // Убираем последний голос из истории
+      setCurrentPairIndex((prevIndex) => prevIndex - 1);
+  
+      // Корректируем результаты
       if (!draw) {
+        // Если не ничья, то уменьшаем очки только у победителя
         setResults((prevResults) => ({
           ...prevResults,
-          [winner.title]: (prevResults[winner.title] || 0) + 2,
+          [winner.title]: (prevResults[winner.title] || 0) - 2,
         }));
       } else {
+        // Если ничья, то уменьшаем очки у обоих
         setResults((prevResults) => ({
           ...prevResults,
-          [pairs[0][0].title]: (prevResults[pairs[0][0].title] || 0) + 1,
-          [pairs[0][1].title]: (prevResults[pairs[0][1].title] || 0) + 1,
+          [pair[0].title]: (prevResults[pair[0].title] || 0) - 1,
+          [pair[1].title]: (prevResults[pair[1].title] || 0) - 1,
         }));
       }
-
-      const currentPairs = pairs.slice(1);
-      setPairs(currentPairs);
-      setCurrentPairIndex((prevIndex) => prevIndex + 1);
-
-      // Проверяем, есть ли еще пары для голосования
-      if (currentPairs.length > 0) {
-        // Загружаем постеры для следующей пары
-        await loadPostersForPair(currentPairs[0]);
-      } else if (currentRound < rounds) {
-        setCurrentRound((prev) => prev + 1);
-        setCurrentPairIndex(0); // Сбрасываем индекс пар
-        const nextPairs = generateTournamentPairs();
-        setPairs(nextPairs);
-        setTotalPairs(nextPairs.length); // Обновляем количество пар для нового раунда
-        setCurrentPairIndex(0);
-        // Запрос постеров для новой пары
-        await loadPostersForPair(nextPairs[0]);
-      } else {
-        setFinished(true);
-      }
-
-      saveTournamentState();
-  };
+    }
+  };  
 
   const sortedAnime = Object.entries(results)
     .map(([title, score]) => {
@@ -369,8 +402,10 @@ const Home = () => {
             currentPairIndex={currentPairIndex}
             totalPairs={totalPairs}
             pairs={pairs}
+            voteHistory={voteHistory}
             posters={posters}
             handleVote={handleVote}
+            handleBackToPreviousPair={handleBackToPreviousPair}
           />
         )}
   

@@ -14,8 +14,10 @@ interface TournamentRoundProps {
   currentPairIndex: number;
   totalPairs: number;
   pairs: AnimeData[][]; // Массив пар аниме
+  voteHistory: AnimeData[][];
   posters: { [key: string]: string }; // Объект с постерами аниме
   handleVote: (winner: AnimeData, draw?: boolean) => void; // Функция для обработки голосования
+  handleBackToPreviousPair: () => void;
 }
 
 const TournamentRound: React.FC<TournamentRoundProps> = ({
@@ -24,8 +26,10 @@ const TournamentRound: React.FC<TournamentRoundProps> = ({
   currentPairIndex,
   totalPairs,
   pairs,
+  voteHistory,
   posters,
   handleVote,
+  handleBackToPreviousPair,
 }) => {
   return (
     <>
@@ -52,11 +56,20 @@ const TournamentRound: React.FC<TournamentRoundProps> = ({
             <span className="text-2xl font-bold text-white mb-2">VS</span>
             <button
               onClick={() => handleVote(pairs[0][0], true)} // Обработка ничьей
-              className="block bg-gradient-to-r from-pink-300 to-orange-300 hover:from-blue-300 hover:to-cyan-300 text-black mt-4 px-6 py-3 rounded-lg shadow transition-all duration-200"
+              className="block bg-gradient-to-r from-pink-300 to-orange-300 hover:from-pink-400 hover:to-orange-400 text-white mt-4 px-6 py-3 rounded-lg shadow transition-all duration-200"
             >
               Draw
             </button>
+            {voteHistory.length > 0 && (
+              <button
+                onClick={() => handleBackToPreviousPair()}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg transition-all mt-4"
+              >
+                Back
+              </button>
+            )}
           </div>
+
 
           {/* Вторая аниме пара */}
           <div className="flex-1 text-center p-4 bg-white rounded-lg shadow-lg transition-transform duration-300">
