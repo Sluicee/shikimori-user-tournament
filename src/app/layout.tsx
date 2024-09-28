@@ -15,7 +15,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Tournament",
-  description: "tournament",
+  description: "shikimori anime manga tournament",
 };
 
 export default function RootLayout({

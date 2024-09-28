@@ -17,6 +17,8 @@ const Home = () => {
   const [tournamentStarted, setTournamentStarted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [targetType, setTargetType] = useState<'Anime' | 'Manga'>('Anime'); // Состояние для типа турнира
+  const [currentPairIndex, setCurrentPairIndex] = useState<number>(0);
+  const [totalPairs, setTotalPairs] = useState<number>(0);
 
   useEffect(() => {
     const savedState = localStorage.getItem('tournamentState');
@@ -165,6 +167,7 @@ const Home = () => {
       setTournamentStarted(true);
       const generatedPairs = generateTournamentPairs();
       setPairs(generatedPairs);
+      setTotalPairs(generatedPairs.length);  // Устанавливаем общее количество пар
   
       // Запрос постеров для аниме в первой паре
       await loadPostersForPair(generatedPairs[0]);
@@ -182,38 +185,41 @@ const Home = () => {
   };
 
   const handleVote = async (winner: any, draw: boolean = false) => {
-    if (!draw) {
-      setResults((prevResults) => ({
-        ...prevResults,
-        [winner.title]: (prevResults[winner.title] || 0) + 2,
-      }));
-    } else {
-      setResults((prevResults) => ({
-        ...prevResults,
-        [pairs[0][0].title]: (prevResults[pairs[0][0].title] || 0) + 1,
-        [pairs[0][1].title]: (prevResults[pairs[0][1].title] || 0) + 1,
-      }));
-    }
-  
-    const currentPairs = pairs.slice(1);
-    setPairs(currentPairs);
-  
-    // Проверяем, есть ли еще пары для голосования
-    if (currentPairs.length > 0) {
-      // Загружаем постеры для следующей пары
-      await loadPostersForPair(currentPairs[0]);
-    } else if (currentRound < rounds) {
-      setCurrentRound((prev) => prev + 1);
-      const nextPairs = generateTournamentPairs();
-      setPairs(nextPairs);
-      
-      // Запрос постеров для новой пары
-      await loadPostersForPair(nextPairs[0]);
-    } else {
-      setFinished(true);
-    }
+      if (!draw) {
+        setResults((prevResults) => ({
+          ...prevResults,
+          [winner.title]: (prevResults[winner.title] || 0) + 2,
+        }));
+      } else {
+        setResults((prevResults) => ({
+          ...prevResults,
+          [pairs[0][0].title]: (prevResults[pairs[0][0].title] || 0) + 1,
+          [pairs[0][1].title]: (prevResults[pairs[0][1].title] || 0) + 1,
+        }));
+      }
 
-    saveTournamentState();
+      const currentPairs = pairs.slice(1);
+      setPairs(currentPairs);
+      setCurrentPairIndex((prevIndex) => prevIndex + 1);
+
+      // Проверяем, есть ли еще пары для голосования
+      if (currentPairs.length > 0) {
+        // Загружаем постеры для следующей пары
+        await loadPostersForPair(currentPairs[0]);
+      } else if (currentRound < rounds) {
+        setCurrentRound((prev) => prev + 1);
+        setCurrentPairIndex(0); // Сбрасываем индекс пар
+        const nextPairs = generateTournamentPairs();
+        setPairs(nextPairs);
+        setTotalPairs(nextPairs.length); // Обновляем количество пар для нового раунда
+        setCurrentPairIndex(0);
+        // Запрос постеров для новой пары
+        await loadPostersForPair(nextPairs[0]);
+      } else {
+        setFinished(true);
+      }
+
+      saveTournamentState();
   };
 
   const sortedAnime = Object.entries(results)
@@ -360,6 +366,8 @@ const Home = () => {
           <TournamentRound
             currentRound={currentRound}
             rounds={rounds}
+            currentPairIndex={currentPairIndex}
+            totalPairs={totalPairs}
             pairs={pairs}
             posters={posters}
             handleVote={handleVote}

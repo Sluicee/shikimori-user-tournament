@@ -1,25 +1,37 @@
 import React from 'react';
 
+interface AnimeData {
+  title: string;
+  score: number;
+  seriesAnimedbId: number;
+  url: string;
+  poster: string;
+}
+
 interface TournamentRoundProps {
   currentRound: number;
   rounds: number;
-  pairs: any[]; // Массив пар аниме
+  currentPairIndex: number;
+  totalPairs: number;
+  pairs: AnimeData[][]; // Массив пар аниме
   posters: { [key: string]: string }; // Объект с постерами аниме
-  handleVote: (winner: any, draw?: boolean) => void; // Функция для обработки голосования
+  handleVote: (winner: AnimeData, draw?: boolean) => void; // Функция для обработки голосования
 }
 
 const TournamentRound: React.FC<TournamentRoundProps> = ({
   currentRound,
   rounds,
+  currentPairIndex,
+  totalPairs,
   pairs,
   posters,
   handleVote,
 }) => {
   return (
     <>
-      <h2 className="text-3xl font-bold text-white mb-4 text-center">
-        Current Round: {currentRound}/{rounds}
-      </h2>
+      <div className="text-white mt-4">
+        Round {currentRound} of {rounds} - Pair {currentPairIndex + 1} of {totalPairs}
+      </div>
       {pairs.length > 0 && (
         <div className="flex justify-between mb-6 p-6 rounded-lg bg-gradient-to-r from-purple-600 to-purple-800 shadow-lg">
           {/* Первая аниме пара */}
@@ -30,7 +42,7 @@ const TournamentRound: React.FC<TournamentRoundProps> = ({
               className="mx-auto w-48 h-auto rounded-lg cursor-pointer transition-transform duration-200 hover:scale-105"
               onClick={() => handleVote(pairs[0][0])} // Обработка голосования для первого аниме
             />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2 mx-auto w-64 h-auto  min-h-[60px] flex items-center justify-center">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2 mx-auto w-64 h-auto min-h-[60px] flex items-center justify-center">
               {pairs[0][0].title} (Score: {pairs[0][0].score})
             </h3>
           </div>
@@ -54,7 +66,7 @@ const TournamentRound: React.FC<TournamentRoundProps> = ({
               className="mx-auto w-48 h-auto rounded-lg cursor-pointer transition-transform duration-200 hover:scale-105"
               onClick={() => handleVote(pairs[0][1])} // Обработка голосования для второго аниме
             />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2 mx-auto w-64 h-auto  min-h-[60px] flex items-center justify-center">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2 mx-auto w-64 h-auto min-h-[60px] flex items-center justify-center">
               {pairs[0][1].title} (Score: {pairs[0][1].score})
             </h3>
           </div>
