@@ -5,6 +5,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-geist-sans: 'Geist Sans', sans-serif;
+  --font-geist-mono: 'Geist Mono', monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,11 +19,33 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans); /* Применение основного шрифта */
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+.btn-gradient {
+  @apply bg-gradient-to-r from-blue-500 to-green-500 text-white;
+}
+.btn-gradient:hover {
+  @apply scale-105 transition-transform duration-300 ease-in-out;
+}
+
+/* В styles.css или другом CSS-файле */
+.loader {
+  border: 8px solid rgba(255, 255, 255, 0.1);
+  border-left: 8px solid #fff;
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
