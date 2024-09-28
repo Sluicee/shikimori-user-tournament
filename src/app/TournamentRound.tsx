@@ -30,7 +30,7 @@ const TournamentRound: React.FC<TournamentRoundProps> = ({
               className="mx-auto w-48 h-auto rounded-lg cursor-pointer transition-transform duration-200 hover:scale-105"
               onClick={() => handleVote(pairs[0][0])} // Обработка голосования для первого аниме
             />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2 mx-auto w-64 h-auto  min-h-[60px] flex items-center justify-center">
               {pairs[0][0].title} (Score: {pairs[0][0].score})
             </h3>
           </div>
@@ -54,7 +54,7 @@ const TournamentRound: React.FC<TournamentRoundProps> = ({
               className="mx-auto w-48 h-auto rounded-lg cursor-pointer transition-transform duration-200 hover:scale-105"
               onClick={() => handleVote(pairs[0][1])} // Обработка голосования для второго аниме
             />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2 mx-auto w-64 h-auto  min-h-[60px] flex items-center justify-center">
               {pairs[0][1].title} (Score: {pairs[0][1].score})
             </h3>
           </div>

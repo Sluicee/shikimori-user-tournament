@@ -16,7 +16,7 @@ const Home = () => {
   const [posters, setPosters] = useState<{ [key: string]: string }>({});
   const [tournamentStarted, setTournamentStarted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [targetType, setTargetType] = useState<'Anime' | 'Manga'>('Anime'); // Состояние для типа турнира
 
   useEffect(() => {
     const savedState = localStorage.getItem('tournamentState');
@@ -31,148 +31,118 @@ const Home = () => {
       setFinished(parsedState.finished);
       setPosters(parsedState.posters);
       setTournamentStarted(parsedState.tournamentStarted);
+      setTargetType(parsedState.targetType || 'Anime'); // Восстанавливаем тип турнира
     }
   }, []);
 
+  type AnimeData = {
+    title: string;
+    score: number;
+    seriesAnimedbId: number;
+    url: string;
+    poster: string;
+  };
+
   const fetchAnimeList = async (username: string) => {
-    setError(null); // Сбрасываем ошибку перед новым запросом
-    setIsLoading(true); // Устанавливаем isLoading в true перед началом загрузки
+    setError(null);
+    setIsLoading(true);
+    
     try {
-      const userResponse = await fetch('https://shikimori.one/api/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          query: `{
-            users(search: "${username}") { 
-              id
-            }
-          }`,
-        }),
-      });
-  
-      const userData = await userResponse.json();
-      const userId = userData?.data?.users?.[0]?.id;
-  
-      if (userId) {
-        let allAnimeData: any[] = [];
-        let page = 1;
-        let totalAnimeFetched = 0;
-        let ratesData;
-  
-        // Запрашиваем данные, пока они есть
-        do {
-          const ratesResponse = await fetch('https://shikimori.one/api/graphql', {
+        const userResponse = await fetch('https://shikimori.one/api/graphql', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
             },
             body: JSON.stringify({
-              query: `{
-                userRates(userId: ${userId}, page: ${page}, limit: 50, targetType: Anime, order: { field: updated_at, order: desc }) {
-                  id
-                  anime { id name poster { miniUrl } url }
-                  score
-                  status
-                }
-              }`,
+                query: `{
+                    users(search: "${username}") { 
+                        id
+                    }
+                }`,
             }),
-          });
-  
-          ratesData = await ratesResponse.json();
-          const animeData = ratesData?.data?.userRates || [];
-  
-          // Добавляем полученные аниме в общий массив
-          allAnimeData = [...allAnimeData, ...animeData];
-          totalAnimeFetched = animeData.length;
-  
-          page++; // Переход к следующей странице
-        } while (totalAnimeFetched === 50); // Если получили 50, значит, есть еще страницы
-  
-        // Фильтрация по статусу после получения всех данных
-        const filteredAnimeData = allAnimeData
-          .filter((rate: any) => rate.status === 'completed')
-          .map((rate: any) => ({
-            title: rate.anime.name,
-            score: rate.score,
-            seriesAnimedbId: rate.anime.id,
-            url: rate.anime.url,
-          })) || [];
-  
-        setAnimeList(filteredAnimeData);
-        setCurrentRound(1);
-        setResults(filteredAnimeData.reduce((acc: { [x: string]: number; }, anime: { title: string | number; }) => {
-          acc[anime.title] = 0;
-          return acc;
-        }, {}));
-        setFinished(false);
-      } else {
-        setError('User not found. Please check the username.'); // Устанавливаем сообщение об ошибке
-      }
+        });
+
+        const userData = await userResponse.json();
+        const userId = userData?.data?.users?.[0]?.id;
+
+        if (userId) {
+            let allData: any[] = [];
+            let page = 1;
+            let totalFetched = 0;
+            let ratesData;
+
+            // Запрашиваем данные, пока они есть
+            do {
+                const ratesResponse = await fetch('https://shikimori.one/api/graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: `{
+                            userRates(userId: ${userId}, page: ${page}, limit: 50, targetType: ${targetType}, order: { field: updated_at, order: desc }) {
+                                id
+                                ${targetType === 'Anime' ? 'anime' : 'manga'} { id name poster { main2xUrl } url }
+                                score
+                                status
+                            }
+                        }`,
+                    }),
+                });
+
+                ratesData = await ratesResponse.json();
+                const data = ratesData?.data?.userRates || [];
+
+                // Добавляем полученные данные в общий массив
+                allData = [...allData, ...data];
+                totalFetched = data.length;
+
+                page++;
+            } while (totalFetched === 50); // Если получили 50, значит, есть еще страницы
+
+            // Фильтрация по статусу после получения всех данных
+            const filteredData: AnimeData[] = allData
+                .filter((rate: any) => rate.status === 'completed')
+                .map((rate: any) => {
+                    const targetItem = rate[targetType === 'Anime' ? 'anime' : 'manga'];
+                    if (targetItem) {
+                        const posterUrl = targetItem.poster?.main2xUrl || ''; // Получаем URL постера
+                        return {
+                            title: targetItem.name,
+                            score: rate.score,
+                            seriesAnimedbId: targetItem.id,
+                            url: targetItem.url,
+                            poster: posterUrl, // Добавляем URL постера
+                        };
+                    }
+                    return null; // Вернем null, если targetItem не найден
+                })
+                .filter((item): item is AnimeData => item !== null); // Фильтруем null значения и типизируем
+
+            setAnimeList(filteredData);
+            setCurrentRound(1);
+            setResults(filteredData.reduce((acc: { [x: string]: number; }, anime: AnimeData) => {
+                acc[anime.title] = 0;
+                return acc;
+            }, {}));
+            setFinished(false);
+        } else {
+            setError('User not found. Please check the username.');
+        }
     } catch (error) {
-      setError('Error fetching anime list.'); // Устанавливаем сообщение об ошибке в случае ошибки запроса
-      console.error('Error fetching anime list:', error);
+        setError('Error fetching anime list.');
+        console.error('Error fetching anime list:', error);
     } finally {
-      setIsLoading(false); // Устанавливаем isLoading в false после завершения загрузки
+        setIsLoading(false);
     }
   };
-  
-  
+
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchAnimeList(username);
-  };
-
-  const fetchPoster = async (seriesAnimedbId: string) => {
-    const cachedPoster = localStorage.getItem(`poster_${seriesAnimedbId}`);
-    if (cachedPoster) {
-      console.log(`Poster for ID ${seriesAnimedbId} fetched from cache.`);
-      return cachedPoster;
-    }
-  
-    console.log(`Fetching poster for ID: ${seriesAnimedbId}`);
-    const query = `
-      {
-        animes(ids: "${seriesAnimedbId}") {
-          poster {
-            originalUrl
-            mainUrl
-          }
-        }
-      }`;
-  
-    try {
-      const response = await fetch('https://shikimori.one/api/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-      });
-  
-      if (response.status === 429) {
-        console.error('Too many requests. Waiting before retrying...');
-        await new Promise((res) => setTimeout(res, 2000)); // Подождать 2 секунды
-        return fetchPoster(seriesAnimedbId); // Повторить запрос
-      }
-  
-      const data = await response.json();
-      const posterUrl = data?.data?.animes?.[0]?.poster?.originalUrl || null;
-  
-      if (posterUrl) {
-        localStorage.setItem(`poster_${seriesAnimedbId}`, posterUrl); // Сохранить постер в localStorage
-      }
-  
-      return posterUrl;
-    } catch (error) {
-      console.error('Error fetching poster:', error);
-      return null; // Вернуть null в случае ошибки
-    }
   };
 
   const generateTournamentPairs = () => {
@@ -204,7 +174,7 @@ const Home = () => {
   const loadPostersForPair = async (pair: any[]) => {
     for (const anime of pair) {
       if (!posters[anime.seriesAnimedbId]) {
-        const posterUrl = await fetchPoster(anime.seriesAnimedbId);
+        const posterUrl = anime.poster;
         console.log(`Poster fetched for ${anime.seriesAnimedbId}: ${posterUrl}`); // Логируем URL постера
         setPosters((prev) => ({ ...prev, [anime.seriesAnimedbId]: posterUrl }));
       }
@@ -268,6 +238,7 @@ const Home = () => {
     setFinished(false);
     setPosters({});
     setTournamentStarted(false); // Сбрасываем состояние
+    setTargetType('Anime'); // Сбрасываем тип турнира
     saveTournamentState();
   };
 
@@ -282,6 +253,7 @@ const Home = () => {
       finished,
       posters,
       tournamentStarted,
+      targetType, // Сохраняем тип турнира
     };
     localStorage.setItem('tournamentState', JSON.stringify(state));
   };  
@@ -325,6 +297,31 @@ const Home = () => {
                 />
               </div>
             </div>
+
+            {/* Переключатель между аниме и мангой */}
+            <div className="flex mb-4">
+              <label className="mr-4 text-lg font-semibold text-gray-300">
+                <input
+                  type="radio"
+                  value="Anime"
+                  checked={targetType === 'Anime'}
+                  onChange={() => setTargetType('Anime')}
+                  className="mr-2"
+                />
+                Anime
+              </label>
+              <label className="text-lg font-semibold text-gray-300">
+                <input
+                  type="radio"
+                  value="Manga"
+                  checked={targetType === 'Manga'}
+                  onChange={() => setTargetType('Manga')}
+                  className="mr-2"
+                />
+                Manga
+              </label>
+            </div>
+            
             <button
               type="submit"
               className="flex justify-center w-full bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-500 hover:to-cyan-500 text-white py-2 rounded-lg transition-all mb-4"
@@ -336,7 +333,7 @@ const Home = () => {
                   <div className="loader ml-2"></div> {/* Добавляем анимацию загрузчика */}
                 </div>
               ) : (
-                'Fetch Anime List'
+                'Fetch List'
               )}
             </button>
             {animeList.length > 0 && !tournamentStarted && (
